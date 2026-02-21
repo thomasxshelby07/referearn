@@ -12,8 +12,9 @@ export default async function DashboardPage() {
         return (
             <div className="p-8 bg-red-50 border border-red-200 rounded-3xl text-red-800">
                 <h2 className="text-xl font-bold mb-2">⚠️ Database Connection Error</h2>
-                <p>Could not connect to MongoDB. Please check if <b>MONGO_URI</b> is set in your Vercel Environment Variables.</p>
-                <p className="mt-4 text-sm opacity-75">Note: If your backend is on Railway, you must still provide the MONGO_URI to the Vercel frontend so it can read the data.</p>
+                <p>Could not connect to MongoDB. The <b>MONGO_URI</b> environment variable is missing in the current <b>{process.env.NODE_ENV}</b> environment.</p>
+                <p className="mt-4 text-sm font-semibold italic">Important: If you just added the variable in Vercel settings, you MUST manually trigger a "Redeploy" for it to take effect.</p>
+                <p className="mt-2 text-xs opacity-75">Deployment Env: {process.env.VERCEL_ENV || 'local'}</p>
             </div>
         );
     }
