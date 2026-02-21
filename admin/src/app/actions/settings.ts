@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import connectDB from '@/lib/db';
 import { Settings } from '@/lib/models';
+import { clearSettingsCache } from '@/lib/redis';
 
 export async function updateSettings(formData: FormData) {
     await connectDB();
@@ -45,6 +46,7 @@ export async function updateSettings(formData: FormData) {
     if (vipMessageMediaUrl) settings.vipMessageMediaUrl = vipMessageMediaUrl;
 
     await settings.save();
+    await clearSettingsCache();
     revalidatePath('/settings');
 }
 
@@ -79,5 +81,6 @@ export async function updateButtonControls(formData: FormData) {
     }
 
     await Settings.findOneAndUpdate({}, { $set }, { upsert: true });
+    await clearSettingsCache();
     revalidatePath('/button-control');
 }

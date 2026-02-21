@@ -4,9 +4,12 @@ import { Referral } from '../models/Referral';
 import { Settings } from '../models/Settings';
 import { Withdrawal } from '../models/Withdrawal';
 import { getMainMenuOptions } from './menus';
-import { redis } from '../config/redis';
+import { redis, getCachedSettings } from '../config/redis';
 import { Task } from '../models/Task';
 import { ActivityLog } from '../models/ActivityLog';
+
+// ── Caching Keys ─────────────────────────────────────
+const USER_EXISTS_KEY = (id: string) => `user:exists:${id}`;
 
 // ─────────────────────────────────────────────
 // ACTIVITY GENERATOR – Full Name Pool (~200)
@@ -90,43 +93,51 @@ export const setupCommands = (bot: TelegramBot) => {
         const startPayload = match ? match[1] : null;
 
         try {
-            let user = await User.findOne({ telegramId });
+            // Check Redis cache for user existence first
+            const userExists = await redis.get(USER_EXISTS_KEY(telegramId));
+            let user;
 
-            if (!user) {
-                let referrerId = undefined;
+            if (!userExists) {
+                user = await User.findOne({ telegramId });
+                if (!user) {
+                    let referrerId = undefined;
 
-                if (startPayload?.startsWith('ref_')) {
-                    const refId = startPayload.replace('ref_', '');
-                    if (refId !== telegramId) {
-                        const referrer = await User.findOne({ telegramId: refId });
-                        if (referrer) {
-                            referrerId = referrer.telegramId;
-                            let settings = await Settings.findOne() || await Settings.create({});
-                            const refReward = settings.referralRewardAmount || 0;
-                            if (refReward > 0) {
-                                referrer.balance += refReward;
-                                referrer.totalEarned += refReward;
-                                await referrer.save();
-                                bot.sendMessage(referrer.telegramId, `🎉 Someone joined using your invite link! You earned ₹${refReward}`).catch(console.error);
+                    if (startPayload?.startsWith('ref_')) {
+                        const refId = startPayload.replace('ref_', '');
+                        if (refId !== telegramId) {
+                            const [referrer, settings] = await Promise.all([
+                                User.findOne({ telegramId: refId }),
+                                getCachedSettings()
+                            ]);
+
+                            if (referrer) {
+                                referrerId = referrer.telegramId;
+                                const refReward = settings?.referralRewardAmount || 0;
+                                if (refReward > 0) {
+                                    referrer.balance += refReward;
+                                    referrer.totalEarned += refReward;
+                                    await referrer.save();
+                                    bot.sendMessage(referrer.telegramId, `🎉 Someone joined using your invite link! You earned ₹${refReward}`).catch(console.error);
+                                }
+                                await Referral.create({ userId: referrerId, invitedId: telegramId, status: 'confirmed' });
                             }
-                            await Referral.create({ userId: referrerId, invitedId: telegramId, status: 'confirmed' });
                         }
                     }
+                    user = await User.create({ telegramId, name: firstName, referrerId, balance: 0, totalEarned: 0 });
                 }
-                user = await User.create({ telegramId, name: firstName, referrerId, balance: 0, totalEarned: 0 });
+                // Cache user existence in Redis for 24 hours
+                await redis.set(USER_EXISTS_KEY(telegramId), '1', 'EX', 86400);
             } else {
-                // Update name if changed
-                if (firstName && user.name !== firstName) {
-                    user.name = firstName;
-                    await user.save();
-                }
+                // User exists in cache, but we might need to update name occasionally
+                // For performance, we skip DB update if it's just a normal start
+                // and use a background task or throttle it if needed.
             }
 
-            const settings = await Settings.findOne() || await Settings.create({});
-            const welcomeText = settings.welcomeMessageText || 'Welcome!';
+            const settings = await getCachedSettings();
+            const welcomeText = settings?.welcomeMessageText || 'Welcome!';
             const menuOptions = await getMainMenuOptions(settings);
 
-            if (settings.welcomeMessageMediaUrl) {
+            if (settings?.welcomeMessageMediaUrl) {
                 await bot.sendPhoto(chatId, settings.welcomeMessageMediaUrl, { caption: welcomeText, ...menuOptions });
             } else {
                 await bot.sendMessage(chatId, welcomeText, menuOptions);
@@ -188,7 +199,10 @@ export const setupCommands = (bot: TelegramBot) => {
 
         // VIP verification
         if (data === 'verify_vip') {
-            const user = await User.findOne({ telegramId });
+            const [user, settings] = await Promise.all([
+                User.findOne({ telegramId }),
+                getCachedSettings()
+            ]);
             if (!user) return;
 
             if (user.hasClaimedVipReward) {
@@ -196,8 +210,7 @@ export const setupCommands = (bot: TelegramBot) => {
                 return;
             }
 
-            const settings = await Settings.findOne() || await Settings.create({});
-            const channelId = settings.vipChannelId;
+            const channelId = settings?.vipChannelId;
 
             if (!channelId) {
                 await bot.sendMessage(chatId, '❌ VIP Channel is not configured yet.');
@@ -209,7 +222,7 @@ export const setupCommands = (bot: TelegramBot) => {
                 const allowed = ['member', 'administrator', 'creator'];
                 if (allowed.includes(member.status)) {
                     // Reward user
-                    const reward = settings.vipRewardAmount || 100;
+                    const reward = settings?.vipRewardAmount || 100;
                     user.balance += reward;
                     user.totalEarned += reward;
                     user.hasClaimedVipReward = true;
@@ -265,8 +278,10 @@ export const setupCommands = (bot: TelegramBot) => {
         }
 
         if (wState === 'awaiting_phone') {
-            const data = await redis.hgetall(WITHDRAW_DATA_KEY(telegramId));
-            const user = await User.findOne({ telegramId });
+            const [data, user] = await Promise.all([
+                redis.hgetall(WITHDRAW_DATA_KEY(telegramId)),
+                User.findOne({ telegramId })
+            ]);
 
             if (!user) {
                 await redis.del(WITHDRAW_STATE_KEY(telegramId));
@@ -286,8 +301,10 @@ export const setupCommands = (bot: TelegramBot) => {
             });
 
             // Clear conversation state
-            await redis.del(WITHDRAW_STATE_KEY(telegramId));
-            await redis.del(WITHDRAW_DATA_KEY(telegramId));
+            await Promise.all([
+                redis.del(WITHDRAW_STATE_KEY(telegramId)),
+                redis.del(WITHDRAW_DATA_KEY(telegramId))
+            ]);
 
             await bot.sendMessage(msg.chat.id,
                 `🎉 <b>Withdraw Request Submitted!</b>\n\n` +
@@ -303,7 +320,9 @@ export const setupCommands = (bot: TelegramBot) => {
         }
 
         // ── Regular Keyboard Buttons ──
-        const settings = await Settings.findOne() || await Settings.create({});
+        const settings = await getCachedSettings();
+        if (!settings) return;
+
         const is = (label: string | undefined, fallback: string) => text === (label?.trim() || fallback);
 
         if (is(settings.tasksLabel, '🎯 Tasks')) {
@@ -360,19 +379,20 @@ export const setupCommands = (bot: TelegramBot) => {
 // WALLET (with image)
 // ─────────────────────────────────────────────
 const handleWallet = async (bot: TelegramBot, telegramId: string, settings: any) => {
-    const user = await User.findOne({ telegramId });
-    if (!user) return bot.sendMessage(telegramId, 'User not found.');
+    const [user, paidWithdrawals] = await Promise.all([
+        User.findOne({ telegramId }),
+        Withdrawal.find({ userId: telegramId, status: 'approved' })
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .lean()
+    ]);
 
-    // Fetch paid withdrawal history
-    const paidWithdrawals = await Withdrawal.find({ userId: telegramId, status: 'approved' })
-        .sort({ createdAt: -1 })
-        .limit(10)
-        .lean();
+    if (!user) return bot.sendMessage(telegramId, 'User not found.');
 
     let historyText = '';
     if (paidWithdrawals.length > 0) {
         historyText = '\n\n📜 <b>Paid Withdrawals:</b>\n';
-        for (const w of paidWithdrawals) {
+        for (const w of paidWithdrawals as any[]) {
             const date = new Date(w.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
             historyText += `  ✅ ₹${w.amount} — ${date}\n`;
         }
@@ -395,11 +415,14 @@ const handleWallet = async (bot: TelegramBot, telegramId: string, settings: any)
 // WITHDRAW MENU (with inline button when eligible)
 // ─────────────────────────────────────────────
 const handleWithdrawMenu = async (bot: TelegramBot, telegramId: string, settings: any) => {
-    const user = await User.findOne({ telegramId });
+    const [user, existing] = await Promise.all([
+        User.findOne({ telegramId }),
+        Withdrawal.findOne({ userId: telegramId, status: 'pending' })
+    ]);
+
     if (!user) return bot.sendMessage(telegramId, 'User not found.');
 
     // If already has a pending request — show status instead
-    const existing = await Withdrawal.findOne({ userId: telegramId, status: 'pending' });
     if (existing) {
         await bot.sendMessage(telegramId,
             `✅ <b>Your payment request is already received!</b>\n\nAmount: <b>₹${existing.amount}</b>\n\nYou will receive your amount within <b>24 hours</b>. Please be patient. 🙏`,
@@ -450,8 +473,8 @@ const handleDailyBonus = async (bot: TelegramBot, telegramId: string, settings: 
     const user = await User.findOne({ telegramId });
     if (!user) return;
 
-    user.balance += settings.dailyBonusAmount;
-    user.totalEarned += settings.dailyBonusAmount;
+    user.balance += settings.dailyBonusAmount || 0;
+    user.totalEarned += settings.dailyBonusAmount || 0;
     user.lastBonus = new Date();
     await user.save();
 
@@ -471,8 +494,8 @@ const handleFakeActivity = async (bot: TelegramBot, telegramId: string) => {
     const realCount = Math.round(logsNeeded * 0.4);
     const fakeCount = logsNeeded - realCount;
 
-    // Real logs from DB
-    const dbLogs = await ActivityLog.find().sort({ time: -1 }).limit(20).lean();
+    // Real logs from DB - optimized with limit and lean
+    const dbLogs = await ActivityLog.find().sort({ createdAt: -1 }).limit(10).lean();
     const realLogs: string[] = shuffle(
         (dbLogs as any[]).map((log: any) => {
             if (log.type === 'withdraw') return `💳 <b>User${String(log.userId).slice(-4)}</b> just withdrew ₹${log.amount}`;
