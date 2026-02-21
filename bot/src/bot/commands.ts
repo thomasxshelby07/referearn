@@ -185,6 +185,54 @@ export const setupCommands = (bot: TelegramBot) => {
             }
             return;
         }
+
+        // VIP verification
+        if (data === 'verify_vip') {
+            const user = await User.findOne({ telegramId });
+            if (!user) return;
+
+            if (user.hasClaimedVipReward) {
+                await bot.sendMessage(chatId, '❌ <b>You have already claimed your VIP reward!</b>', { parse_mode: 'HTML' });
+                return;
+            }
+
+            const settings = await Settings.findOne() || await Settings.create({});
+            const channelId = settings.vipChannelId;
+
+            if (!channelId) {
+                await bot.sendMessage(chatId, '❌ VIP Channel is not configured yet.');
+                return;
+            }
+
+            try {
+                const member = await bot.getChatMember(channelId, parseInt(telegramId));
+                const allowed = ['member', 'administrator', 'creator'];
+                if (allowed.includes(member.status)) {
+                    // Reward user
+                    const reward = settings.vipRewardAmount || 100;
+                    user.balance += reward;
+                    user.totalEarned += reward;
+                    user.hasClaimedVipReward = true;
+                    await user.save();
+
+                    // Log activity
+                    await ActivityLog.create({
+                        type: 'task',
+                        userId: telegramId,
+                        amount: reward,
+                        metadata: 'VIP Channel Join'
+                    });
+
+                    await bot.sendMessage(chatId, `🎉 <b>Congratulations!</b>\n\nYou joined the VIP channel and earned <b>₹${reward}</b>!\nYour balance: <b>₹${user.balance}</b>`, { parse_mode: 'HTML' });
+                } else {
+                    await bot.sendMessage(chatId, '❌ <b>You haven\'t joined the VIP channel yet!</b>\n\nPlease join and then click verify.', { parse_mode: 'HTML' });
+                }
+            } catch (error) {
+                console.error('Error verifying VIP join:', error);
+                await bot.sendMessage(chatId, '❌ <b>Error verifying membership.</b>\nMake sure the bot is an admin in the channel and you have joined.', { parse_mode: 'HTML' });
+            }
+            return;
+        }
     });
 
     // ── General Messages (keyboard + withdraw flow) ──
@@ -297,6 +345,12 @@ export const setupCommands = (bot: TelegramBot) => {
         if (is(settings.dailyBonusLabel, '🎁 Daily Bonus')) {
             if (!settings.dailyBonusEnabled) { await bot.sendMessage(msg.chat.id, '🎁 Daily Bonus is currently disabled.'); return; }
             await handleDailyBonus(bot, telegramId, settings);
+            return;
+        }
+
+        if (is(settings.vipLabel, '🌟 VIP Channel')) {
+            if (!settings.vipEnabled) { await bot.sendMessage(msg.chat.id, '🌟 VIP Channel is currently disabled.'); return; }
+            await handleVipChannel(bot, telegramId, settings);
             return;
         }
     });
@@ -480,5 +534,36 @@ const handleEarnMore = async (bot: TelegramBot, telegramId: string, settings: an
     } catch (error) {
         console.error('Error generating referral link:', error);
         bot.sendMessage(telegramId, 'Error generating your invite link. Please try again.');
+    }
+};
+
+// ─────────────────────────────────────────────
+// VIP CHANNEL
+// ─────────────────────────────────────────────
+const handleVipChannel = async (bot: TelegramBot, telegramId: string, settings: any) => {
+    const user = await User.findOne({ telegramId });
+    if (!user) return;
+
+    if (user.hasClaimedVipReward) {
+        await bot.sendMessage(telegramId, '✅ <b>You have already claimed your VIP reward!</b>', { parse_mode: 'HTML' });
+        return;
+    }
+
+    const reward = settings.vipRewardAmount || 100;
+    const channelLink = settings.vipChannelLink || '#';
+    const text = (settings.vipMessageText || '🌟 Join our VIP Channel to earn ₹100 instantly!') +
+        `\n\n💰 <b>Reward:</b> ₹${reward}`;
+
+    const reply_markup = {
+        inline_keyboard: [
+            [{ text: '📢 Join VIP Channel', url: channelLink }],
+            [{ text: '✅ Verify & Claim ₹' + reward, callback_data: 'verify_vip' }]
+        ]
+    };
+
+    if (settings.vipMessageMediaUrl) {
+        await bot.sendPhoto(telegramId, settings.vipMessageMediaUrl, { caption: text, parse_mode: 'HTML', reply_markup });
+    } else {
+        await bot.sendMessage(telegramId, text, { parse_mode: 'HTML', reply_markup });
     }
 };

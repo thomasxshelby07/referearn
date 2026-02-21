@@ -15,6 +15,7 @@ export interface ISettings extends Document {
     activityEnabled: boolean;
     earnMoreEnabled: boolean;
     dailyBonusEnabled: boolean;
+    vipEnabled: boolean;
     // Custom button labels
     tasksLabel: string;
     walletLabel: string;
@@ -22,6 +23,13 @@ export interface ISettings extends Document {
     activityLabel: string;
     earnMoreLabel: string;
     dailyBonusLabel: string;
+    vipLabel: string;
+    // VIP Channel settings
+    vipChannelLink: string;
+    vipChannelId: string;
+    vipRewardAmount: number;
+    vipMessageText: string;
+    vipMessageMediaUrl?: string;
     // Wallet message & image
     walletMessageText: string;
     walletMessageMediaUrl?: string;
@@ -45,6 +53,7 @@ const settingsSchema = new Schema<ISettings>({
     activityEnabled: { type: Boolean, default: true },
     earnMoreEnabled: { type: Boolean, default: true },
     dailyBonusEnabled: { type: Boolean, default: true },
+    vipEnabled: { type: Boolean, default: true },
     // Custom button labels
     tasksLabel: { type: String, default: '🎯 Tasks' },
     walletLabel: { type: String, default: '💰 Wallet' },
@@ -52,6 +61,13 @@ const settingsSchema = new Schema<ISettings>({
     activityLabel: { type: String, default: '📡 Activity' },
     earnMoreLabel: { type: String, default: '🎁 Earn More' },
     dailyBonusLabel: { type: String, default: '🎁 Daily Bonus' },
+    vipLabel: { type: String, default: '🌟 VIP Channel' },
+    // VIP Channel settings
+    vipChannelLink: { type: String, default: '' },
+    vipChannelId: { type: String, default: '' },
+    vipRewardAmount: { type: Number, default: 100 },
+    vipMessageText: { type: String, default: '🌟 Join our VIP Channel to earn ₹100 instantly!' },
+    vipMessageMediaUrl: { type: String },
     // Wallet message & image
     walletMessageText: { type: String, default: '💰 Here is your wallet info:' },
     walletMessageMediaUrl: { type: String },

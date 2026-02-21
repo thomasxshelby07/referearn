@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { updateSettings } from '@/app/actions/settings';
 
-type UploadField = 'welcome' | 'referral' | 'wallet' | 'withdraw';
+type UploadField = 'welcome' | 'referral' | 'wallet' | 'withdraw' | 'vip';
 
 export default function SettingsForm({ settings }: { settings: any }) {
     const [images, setImages] = useState({
@@ -11,10 +11,11 @@ export default function SettingsForm({ settings }: { settings: any }) {
         referral: settings.referralMessageMediaUrl || '',
         wallet: settings.walletMessageMediaUrl || '',
         withdraw: settings.withdrawMessageMediaUrl || '',
+        vip: settings.vipMessageMediaUrl || '',
     });
     const [uploading, setUploading] = useState<UploadField | null>(null);
     const [statuses, setStatuses] = useState<Record<UploadField, string>>({
-        welcome: '', referral: '', wallet: '', withdraw: ''
+        welcome: '', referral: '', wallet: '', withdraw: '', vip: ''
     });
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: UploadField) => {
@@ -118,6 +119,36 @@ export default function SettingsForm({ settings }: { settings: any }) {
                         <label className={labelCls}>Reward Per Valid Referral (₹)</label>
                         <input type="number" name="referralRewardAmount" defaultValue={settings.referralRewardAmount}
                             required className={inputCls} placeholder="e.g. 10" />
+                    </div>
+                </div>
+            </div>
+
+            {/* ── VIP Channel Settings ── */}
+            <div className={sectionCls}>
+                <h2 className="text-xl font-bold text-black mb-4 tracking-wide">🌟 VIP Channel Settings</h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className={labelCls}>VIP Message Text (displayed before join link)</label>
+                        <textarea name="vipMessageText" defaultValue={settings.vipMessageText}
+                            rows={3} className={`${inputCls} resize-y`} placeholder="🌟 Join our VIP Channel to earn ₹100 instantly!" />
+                    </div>
+                    <ImageField field="vip" name="vipMessageMediaUrl" label="VIP Image Upload (Optional)" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className={labelCls}>VIP Channel Link (Public Link)</label>
+                            <input type="text" name="vipChannelLink" defaultValue={settings.vipChannelLink}
+                                className={inputCls} placeholder="e.g. https://t.me/yourchannel" />
+                        </div>
+                        <div>
+                            <label className={labelCls}>VIP Channel Username/@ (for verification)</label>
+                            <input type="text" name="vipChannelId" defaultValue={settings.vipChannelId}
+                                className={inputCls} placeholder="e.g. @yourchannel" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className={labelCls}>VIP Reward Amount (₹)</label>
+                        <input type="number" name="vipRewardAmount" defaultValue={settings.vipRewardAmount}
+                            className={inputCls} placeholder="e.g. 100" />
                     </div>
                 </div>
             </div>

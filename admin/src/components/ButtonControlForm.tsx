@@ -10,6 +10,7 @@ const BUTTONS = [
     { enabledKey: 'activityEnabled', labelKey: 'activityLabel', emoji: '📡', defaultLabel: '📡 Activity' },
     { enabledKey: 'withdrawEnabled', labelKey: 'withdrawLabel', emoji: '🏧', defaultLabel: '🏧 Withdraw' },
     { enabledKey: 'dailyBonusEnabled', labelKey: 'dailyBonusLabel', emoji: '🎁', defaultLabel: '🎁 Daily Bonus' },
+    { enabledKey: 'vipEnabled', labelKey: 'vipLabel', emoji: '🌟', defaultLabel: '🌟 VIP Channel' },
 ] as const;
 
 type EnabledKey = (typeof BUTTONS)[number]['enabledKey'];
@@ -23,6 +24,7 @@ export default function ButtonControlForm({ settings }: { settings: any }) {
         activityEnabled: settings.activityEnabled ?? true,
         withdrawEnabled: settings.withdrawEnabled ?? true,
         dailyBonusEnabled: settings.dailyBonusEnabled ?? true,
+        vipEnabled: settings.vipEnabled ?? true,
     });
     const [labels, setLabels] = useState<Record<LabelKey, string>>({
         tasksLabel: settings.tasksLabel || '🎯 Tasks',
@@ -31,6 +33,7 @@ export default function ButtonControlForm({ settings }: { settings: any }) {
         activityLabel: settings.activityLabel || '📡 Activity',
         withdrawLabel: settings.withdrawLabel || '🏧 Withdraw',
         dailyBonusLabel: settings.dailyBonusLabel || '🎁 Daily Bonus',
+        vipLabel: settings.vipLabel || '🌟 VIP Channel',
     });
     const [saved, setSaved] = useState(false);
 

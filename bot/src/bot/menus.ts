@@ -6,6 +6,7 @@ export const getMainMenuOptions = async (settings: ISettings | null): Promise<Te
     const row1: TelegramBot.KeyboardButton[] = [];
     const row2: TelegramBot.KeyboardButton[] = [];
     const row3: TelegramBot.KeyboardButton[] = [];
+    const row4: TelegramBot.KeyboardButton[] = [];
 
     const l = (field: string | undefined, fallback: string) => field?.trim() || fallback;
 
@@ -15,8 +16,9 @@ export const getMainMenuOptions = async (settings: ISettings | null): Promise<Te
     if (!settings || settings.activityEnabled !== false) row2.push({ text: l(settings?.activityLabel, '📡 Activity') });
     if (!settings || settings.withdrawEnabled !== false) row3.push({ text: l(settings?.withdrawLabel, '🏧 Withdraw') });
     if (!settings || settings.dailyBonusEnabled !== false) row3.push({ text: l(settings?.dailyBonusLabel, '🎁 Daily Bonus') });
+    if (!settings || settings.vipEnabled !== false) row4.push({ text: l(settings?.vipLabel, '🌟 VIP Channel') });
 
-    const keyboard = [row1, row2, row3].filter(row => row.length > 0);
+    const keyboard = [row1, row2, row3, row4].filter(row => row.length > 0);
 
     return {
         reply_markup: {

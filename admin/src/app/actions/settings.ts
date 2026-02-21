@@ -18,6 +18,11 @@ export async function updateSettings(formData: FormData) {
     const walletMessageMediaUrl = formData.get('walletMessageMediaUrl') as string | null;
     const withdrawMessageText = formData.get('withdrawMessageText') as string;
     const withdrawMessageMediaUrl = formData.get('withdrawMessageMediaUrl') as string | null;
+    const vipChannelLink = formData.get('vipChannelLink') as string;
+    const vipChannelId = formData.get('vipChannelId') as string;
+    const vipRewardAmount = Number(formData.get('vipRewardAmount'));
+    const vipMessageText = formData.get('vipMessageText') as string;
+    const vipMessageMediaUrl = formData.get('vipMessageMediaUrl') as string | null;
 
     let settings = await Settings.findOne();
     if (!settings) settings = new Settings();
@@ -33,6 +38,11 @@ export async function updateSettings(formData: FormData) {
     if (walletMessageMediaUrl) settings.walletMessageMediaUrl = walletMessageMediaUrl;
     if (withdrawMessageText) settings.withdrawMessageText = withdrawMessageText;
     if (withdrawMessageMediaUrl) settings.withdrawMessageMediaUrl = withdrawMessageMediaUrl;
+    settings.vipChannelLink = vipChannelLink;
+    settings.vipChannelId = vipChannelId;
+    if (vipRewardAmount) settings.vipRewardAmount = vipRewardAmount;
+    settings.vipMessageText = vipMessageText;
+    if (vipMessageMediaUrl) settings.vipMessageMediaUrl = vipMessageMediaUrl;
 
     await settings.save();
     revalidatePath('/settings');
@@ -51,6 +61,7 @@ export async function updateButtonControls(formData: FormData) {
         activityEnabled: g('activityEnabled') === '1',
         earnMoreEnabled: g('earnMoreEnabled') === '1',
         dailyBonusEnabled: g('dailyBonusEnabled') === '1',
+        vipEnabled: g('vipEnabled') === '1',
     };
 
     // Custom labels — only set if non-empty
@@ -61,6 +72,7 @@ export async function updateButtonControls(formData: FormData) {
         ['activityLabel', g('activityLabel') || ''],
         ['earnMoreLabel', g('earnMoreLabel') || ''],
         ['dailyBonusLabel', g('dailyBonusLabel') || ''],
+        ['vipLabel', g('vipLabel') || ''],
     ];
     for (const [key, val] of labelMap) {
         if (val.trim()) $set[key] = val.trim();

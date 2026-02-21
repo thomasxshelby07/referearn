@@ -52,6 +52,7 @@ const settingsSchema = new Schema({
     activityEnabled: { type: Boolean, default: true },
     earnMoreEnabled: { type: Boolean, default: true },
     dailyBonusEnabled: { type: Boolean, default: true },
+    vipEnabled: { type: Boolean, default: true },
     // Custom button labels
     tasksLabel: { type: String, default: '🎯 Tasks' },
     walletLabel: { type: String, default: '💰 Wallet' },
@@ -59,12 +60,19 @@ const settingsSchema = new Schema({
     activityLabel: { type: String, default: '📡 Activity' },
     earnMoreLabel: { type: String, default: '🎁 Earn More' },
     dailyBonusLabel: { type: String, default: '🎁 Daily Bonus' },
+    vipLabel: { type: String, default: '🌟 VIP Channel' },
     // Wallet response
     walletMessageText: { type: String, default: '💰 Here is your wallet info:' },
     walletMessageMediaUrl: { type: String },
     // Withdraw response
     withdrawMessageText: { type: String, default: '🏧 Withdraw your earnings:' },
     withdrawMessageMediaUrl: { type: String },
+    // VIP Channel settings
+    vipChannelLink: { type: String, default: '' },
+    vipChannelId: { type: String, default: '' },
+    vipRewardAmount: { type: Number, default: 100 },
+    vipMessageText: { type: String, default: '🌟 Join our VIP Channel to earn ₹100 instantly!' },
+    vipMessageMediaUrl: { type: String },
 });
 
 export const Settings = mongoose.models.Settings || mongoose.model('Settings', settingsSchema);

@@ -9,6 +9,7 @@ export interface IUser extends Document {
     joinedAt: Date;
     lastBonus?: Date;
     isBlocked: boolean;
+    hasClaimedVipReward: boolean;
 }
 
 const userSchema = new Schema<IUser>({
@@ -19,7 +20,8 @@ const userSchema = new Schema<IUser>({
     totalEarned: { type: Number, default: 0 },
     joinedAt: { type: Date, default: Date.now },
     lastBonus: { type: Date },
-    isBlocked: { type: Boolean, default: false }
+    isBlocked: { type: Boolean, default: false },
+    hasClaimedVipReward: { type: Boolean, default: false }
 });
 
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
