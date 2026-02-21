@@ -1,3 +1,4 @@
+// Admin Settings Interface (Last Updated: 2026-02-21)
 'use client';
 
 import { useState } from 'react';

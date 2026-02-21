@@ -1,3 +1,4 @@
+// Bot Menu Configuration (Last Updated: 2026-02-21)
 import TelegramBot from 'node-telegram-bot-api';
 import { ISettings } from '../models/Settings';
 
