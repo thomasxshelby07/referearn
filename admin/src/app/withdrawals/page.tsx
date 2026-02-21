@@ -2,6 +2,8 @@ import connectDB from '@/lib/db';
 import { Withdrawal } from '@/lib/models';
 import { approveWithdrawal, rejectWithdrawal } from '@/app/actions/withdraw';
 
+export const dynamic = 'force-dynamic';
+
 export default async function WithdrawalsPage() {
     await connectDB();
 

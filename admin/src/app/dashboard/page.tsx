@@ -3,6 +3,8 @@ import { User, Withdrawal } from '@/lib/models';
 import { Users, UserPlus, Activity, Wallet, Clock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
     await connectDB();
 

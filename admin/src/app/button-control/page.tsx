@@ -2,6 +2,8 @@ import connectDB from '@/lib/db';
 import { Settings } from '@/lib/models';
 import ButtonControlForm from '@/components/ButtonControlForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function ButtonControlPage() {
     await connectDB();
     let settings = await Settings.findOne();

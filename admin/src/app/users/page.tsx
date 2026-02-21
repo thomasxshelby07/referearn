@@ -1,6 +1,8 @@
 import connectDB from '@/lib/db';
 import { User } from '@/lib/models';
 
+export const dynamic = 'force-dynamic';
+
 export default async function UsersPage() {
     await connectDB();
     const users = await User.find({}).sort({ joinedAt: -1 }).limit(200);

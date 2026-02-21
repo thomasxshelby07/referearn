@@ -2,6 +2,8 @@ import connectDB from '@/lib/db';
 import { Task } from '@/lib/models';
 import { createTask, toggleTask, deleteTask } from '@/app/actions/tasks';
 
+export const dynamic = 'force-dynamic';
+
 export default async function TasksPage() {
     await connectDB();
 

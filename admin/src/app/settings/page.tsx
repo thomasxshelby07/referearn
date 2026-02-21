@@ -2,6 +2,8 @@ import connectDB from '@/lib/db';
 import { Settings } from '@/lib/models';
 import SettingsForm from '@/components/SettingsForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
     await connectDB();
 
