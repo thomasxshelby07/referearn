@@ -34,10 +34,29 @@ setupCommands(bot);
 import './workers/broadcast';
 
 if (isProd) {
+    // Railway URL should be in env: WEBHOOK_URL=https://referearn-production.up.railway.app
     const webhookUrl = process.env.WEBHOOK_URL || '';
-    bot.setWebHook(`${webhookUrl}/bot${token}`);
+    const webhookPath = "/telegram/webhook";
+    const fullWebhookUrl = `${webhookUrl}${webhookPath}`;
 
-    app.post(`/bot${token}`, (req, res) => {
+    if (!webhookUrl) {
+        console.error("❌ WEBHOOK_URL is missing in environment variables!");
+    } else {
+        // Delete existing webhook before setting a new one (recommended for reliability)
+        bot.deleteWebHook()
+            .then(() => {
+                console.log(`Setting webhook to: ${fullWebhookUrl}`);
+                return bot.setWebHook(fullWebhookUrl);
+            })
+            .then(() => {
+                console.log('Webhook set successfully!');
+            })
+            .catch((error) => {
+                console.error('Error setting webhook:', error);
+            });
+    }
+
+    app.post(webhookPath, (req, res) => {
         bot.processUpdate(req.body);
         res.sendStatus(200);
     });
