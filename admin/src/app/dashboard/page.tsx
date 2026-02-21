@@ -6,7 +6,17 @@ import Link from 'next/link';
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-    await connectDB();
+    const conn = await connectDB();
+
+    if (!conn) {
+        return (
+            <div className="p-8 bg-red-50 border border-red-200 rounded-3xl text-red-800">
+                <h2 className="text-xl font-bold mb-2">⚠️ Database Connection Error</h2>
+                <p>Could not connect to MongoDB. Please check if <b>MONGO_URI</b> is set in your Vercel Environment Variables.</p>
+                <p className="mt-4 text-sm opacity-75">Note: If your backend is on Railway, you must still provide the MONGO_URI to the Vercel frontend so it can read the data.</p>
+            </div>
+        );
+    }
 
     const totalUsers = await User.countDocuments({});
 
