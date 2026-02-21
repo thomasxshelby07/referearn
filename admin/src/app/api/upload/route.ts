@@ -20,17 +20,26 @@ export async function POST(req: Request) {
         cloudinary.config({ cloud_name, api_key, api_secret });
 
         const arrayBuffer = await file.arrayBuffer();
-        const buffer = new Uint8Array(arrayBuffer);
+        const buffer = Buffer.from(arrayBuffer);
 
         const result = await new Promise((resolve, reject) => {
-            cloudinary.uploader.upload_stream({ folder: 'referearn_bot' }, (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-            }).end(buffer);
+            const uploadStream = cloudinary.uploader.upload_stream(
+                { folder: 'referearn_bot' },
+                (error, result) => {
+                    if (error) {
+                        console.error('Cloudinary upload error:', error);
+                        reject(error);
+                    } else {
+                        resolve(result);
+                    }
+                }
+            );
+            uploadStream.end(buffer);
         });
 
         return NextResponse.json(result);
     } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        console.error('API Upload Route Error:', err);
+        return NextResponse.json({ error: err.message || 'Unknown upload error' }, { status: 500 });
     }
 }
