@@ -9,11 +9,15 @@ export async function POST(req: Request) {
         const file = data.get('file') as File;
         if (!file) return NextResponse.json({ error: 'No file found' }, { status: 400 });
 
-        cloudinary.config({
-            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-            api_key: process.env.CLOUDINARY_API_KEY,
-            api_secret: process.env.CLOUDINARY_API_SECRET,
-        });
+        const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+        const api_key = process.env.CLOUDINARY_API_KEY;
+        const api_secret = process.env.CLOUDINARY_API_SECRET;
+
+        if (!cloud_name || !api_key || !api_secret) {
+            return NextResponse.json({ error: 'Cloudinary credentials are missing on Vercel. Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to Vercel Environment Variables.' }, { status: 500 });
+        }
+
+        cloudinary.config({ cloud_name, api_key, api_secret });
 
         const arrayBuffer = await file.arrayBuffer();
         const buffer = new Uint8Array(arrayBuffer);
