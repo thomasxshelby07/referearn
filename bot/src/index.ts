@@ -1,3 +1,4 @@
+// Bot Server (Last Updated: 2026-02-21 15:00)
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
