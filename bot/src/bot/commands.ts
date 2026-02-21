@@ -376,20 +376,35 @@ const handleWithdrawMenu = async (bot: TelegramBot, telegramId: string, settings
 // DAILY BONUS
 // ─────────────────────────────────────────────
 const handleDailyBonus = async (bot: TelegramBot, telegramId: string, settings: any) => {
-    const cooldownKey = `bonus:${telegramId}`;
-    const cd = await redis.get(cooldownKey);
-    if (cd) {
-        await bot.sendMessage(telegramId, '⏳ You have already claimed your daily bonus today. Come back tomorrow!');
+    // Get current date in IST (Asia/Kolkata)
+    const options = { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' } as const;
+    const formatter = new Intl.DateTimeFormat('en-IN', options);
+    const parts = formatter.formatToParts(new Date());
+    const year = parts.find(p => p.type === 'year')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    const istDate = `${year}-${month}-${day}`;
+
+    const claimKey = `bonus:claimed:${telegramId}:${istDate}`;
+
+    const alreadyClaimed = await redis.get(claimKey);
+    if (alreadyClaimed) {
+        await bot.sendMessage(telegramId, '⏳ You have already claimed your daily bonus today. Come back after 12:00 AM (IST) tomorrow!');
         return;
     }
+
     const user = await User.findOne({ telegramId });
     if (!user) return;
+
     user.balance += settings.dailyBonusAmount;
     user.totalEarned += settings.dailyBonusAmount;
     user.lastBonus = new Date();
     await user.save();
-    await redis.set(cooldownKey, 'claimed', 'EX', 24 * 60 * 60);
-    await bot.sendMessage(telegramId, `🎁 <b>Daily Bonus Claimed!</b>\n₹${settings.dailyBonusAmount} added to your wallet\n\nCome back tomorrow! 🌟`, { parse_mode: 'HTML' });
+
+    // Set key for current day, expire in 25 hours to clear Redis
+    await redis.set(claimKey, 'claimed', 'EX', 25 * 60 * 60);
+
+    await bot.sendMessage(telegramId, `🎁 <b>Daily Bonus Claimed!</b>\n₹${settings.dailyBonusAmount} added to your wallet\n\nCome back after 12:00 AM (IST) tomorrow! 🌟`, { parse_mode: 'HTML' });
 };
 
 // ─────────────────────────────────────────────
